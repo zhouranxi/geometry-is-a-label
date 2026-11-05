@@ -19,7 +19,6 @@ one.
 pip install numpy scipy
 python code/verify.py
 ```
-
 Re-derives **42 headline numbers** from the locked JSON files in `runs/`
 and asserts each against the value printed in the manuscript — no GPU, no
 downloads, a few seconds of CPU. The checks cover every experiment
@@ -94,6 +93,17 @@ grids × seeds) × 19 intervention conditions = 152 cells, plus
 architecture-extension cohorts (ResNet-34/50, ShuffleNet-V2-x1.0,
 RegNetY-400MF, 4 recipes per family). Checkpoints (~2.8 GB) are available
 from the authors on request.
+
+## Citation
+
+If you use this archive, please cite it:
+
+- Archive: Ranxi Zhou. *Geometry Is a Label, Not a Knob: Causally
+  Separating Representational Dimensionality from OOD Generalization*
+  (code, data, and self-verification), Zenodo, v1.0.0,
+  DOI [10.5281/zenodo.23967260](https://doi.org/10.5281/zenodo.23967260).
+- Manuscript: under review at Transactions on Machine Learning Research
+  (see `paper/causality/main.pdf`).
 
 ## License
 
