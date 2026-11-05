@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+title: "Geometry Is a Label, Not a Knob: Causally Separating Representational Dimensionality from OOD Generalization"
+message: "If you use this archive, please cite the associated paper."
+type: software
+authors:
+  - family-names: Zhou
+    given-names: Ranxi
+    affiliation: "Hunan University of Chinese Medicine, Department of Computer Science and Technology"
+keywords:
+  - representational geometry
+  - effective dimension
+  - out-of-distribution generalization
+  - causal intervention
+  - whitening
+  - preregistration
+  - reproducibility
+license: MIT
+version: 1.0.0
+date-released: "2026-11-05"
+repository-code: "https://github.com/zhouranxi/geometry-is-a-label"
+abstract: "Code and locked data for the preregistered causal battery showing that the observational link between representational dimensionality and OOD transfer (r = +0.97) does not license geometry-as-a-knob interventions: the geometric causal share of the slope is 7.7%, formation-phase whitening benefits are probe-conditioning effects, and every covariance-spectrum marker is a recipe fingerprint."

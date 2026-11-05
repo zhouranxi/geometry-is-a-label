@@ -1,0 +1,25 @@
+{
+ "per_model": [
+  {
+   "model": "resnet18_lr0.125_wd0.0001_s0",
+   "recolor_slope_c100": 0.00642,
+   "recolor_slope_idprobe": 0.00025,
+   "recolor_manip_r": -0.864,
+   "tot_recolor_slope_c100": 0.00101,
+   "tot_recolor_slope_idprobe": 7e-05,
+   "tot_recolor_manip_r": -0.95
+  },
+  {
+   "model": "resnet18_lr0.5_wd0.0001_s1"
+  },
+  {
+   "model": "resnet18_lr1.0_wd2.5e-05_s0",
+   "recolor_slope_c100": 0.08563,
+   "recolor_slope_idprobe": -0.00192,
+   "recolor_manip_r": -0.776,
+   "tot_recolor_slope_c100": 0.03013,
+   "tot_recolor_slope_idprobe": -0.00213,
+   "tot_recolor_manip_r": -0.902
+  }
+ ]
+}

@@ -1,0 +1,31 @@
+{
+ "per_model": [
+  {
+   "model": "resnet18_lr0.125_wd2.5e-05_s1",
+   "recolor_slope_c100": 0.00281,
+   "recolor_slope_idprobe": 0.00019,
+   "recolor_manip_r": -0.91,
+   "tot_recolor_slope_c100": -3e-05,
+   "tot_recolor_slope_idprobe": 0.00012,
+   "tot_recolor_manip_r": -0.984
+  },
+  {
+   "model": "resnet18_lr0.5_wd0.0002_s2",
+   "recolor_slope_c100": 0.19591,
+   "recolor_slope_idprobe": -0.00208,
+   "recolor_manip_r": -0.863,
+   "tot_recolor_slope_c100": 0.12478,
+   "tot_recolor_slope_idprobe": -0.01214,
+   "tot_recolor_manip_r": -0.985
+  },
+  {
+   "model": "resnet18_lr1.0_wd5e-05_s0",
+   "recolor_slope_c100": -0.03021,
+   "recolor_slope_idprobe": -0.01849,
+   "recolor_manip_r": 0.599,
+   "tot_recolor_slope_c100": 0.04865,
+   "tot_recolor_slope_idprobe": 0.00031,
+   "tot_recolor_manip_r": 0.485
+  }
+ ]
+}
