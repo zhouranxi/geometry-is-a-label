@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from scipy.stats import pearsonr, wilcoxon
+from scipy.stats import pearsonr, spearmanr, wilcoxon
 
 REPO = Path(__file__).resolve().parent.parent
 FAILURES: list[str] = []
@@ -278,6 +278,102 @@ def main() -> int:
            for b in rows6 if b["kind"] == "base" and b["model"] == r["model"]]
     check("E6 rotate pins PR exactly (rel change +0.000)",
           max(abs(x) for x in rot) < 1e-9, True)
+
+    # ---------------- E5e saturation / headroom (app:e5e) ----------------
+    ceil = json.loads((REPO / "runs" / "v2_e5d_ceiling"
+                       / "intervene_e5d_ceiling.json").read_text())["rows"]
+    e3_rows = load("v2_e3.json", "v2/e3/intervene_v2.json")
+    glue_d = {r["model"]: r["glue_d"] for r in e3_rows
+              if r.get("kind") == "train_whiten"}
+    m8 = sorted({r["model"] for r in ceil})
+    check("E5e 8 models x 3 doses x 2 spaces = 48 rows", len(ceil), 48)
+    check("E5e covers the 8 E3 paired models",
+          all(m in glue_d for m in m8), True)
+
+    e5e = {}
+    for m in m8:
+        o = next(r for r in ceil if r["model"] == m and r["param"] == 0.0
+                 and r["space"] == "orig")
+        w = next(r for r in ceil if r["model"] == m and r["param"] == 0.0
+                 and r["space"] == "dose")
+        e5e[m] = {
+            "dfx": glue_d[m],
+            "cond_o": o["in_rank_cond"],
+            "improve": o["in_rank_cond"] / w["in_rank_cond"],
+            "loss_o": o["curve"][-1]["train_loss"],
+            "loss_w": w["curve"][-1]["train_loss"],
+            "benefit": 100 * (w["curve"][-1]["c100_acc"]
+                              - o["curve"][-1]["c100_acc"]),
+        }
+    neg = "resnet18_lr1.0_wd5e-05_s0"
+    n = e5e[neg]
+    others = [v["improve"] for m, v in e5e.items() if m != neg]
+    # the stratification paragraph's dfx anchor (0.89 -> 0.87 correction)
+    check("E5e negative-model baseline D_eff = 0.87 (grid minimum)",
+          round(n["dfx"], 2), 0.87)
+    check("E5e negative model orig-space in-rank cond = 294 "
+          "(already nearly whitened)", round(n["cond_o"]), 294)
+    check("E5e negative model conditioning improves only 22x "
+          "(median others 4.6e3x)",
+          (round(n["improve"]), round(float(np.median(others)))),
+          (22, 4593))
+    check("E5e negative model reachable loss fails to drop: 4.134 -> 4.165",
+          (round(n["loss_o"], 3), round(n["loss_w"], 3)), (4.134, 4.165))
+    check("E5e negative model probe benefit +0.08 pp (smallest of 8)",
+          (round(n["benefit"], 2),
+           n["benefit"] == min(v["benefit"] for v in e5e.values())),
+          (0.08, True))
+    # exactly three models fail to lower the reachable loss; the other two
+    # are the slow-converging lr-0.5 probes named in the manuscript
+    nondrop = sorted(m for m, v in e5e.items() if v["loss_w"] >= v["loss_o"])
+    check("E5e 3/8 models fail to lower reachable loss",
+          (len(nondrop),
+           all(m.startswith("resnet18_lr0.5") for m in nondrop
+               if m != neg)), (3, True))
+    # C2 headroom: refuted -- dfx correlates positively with benefit
+    xs5 = [v["dfx"] for v in e5e.values()]
+    ys5 = [v["benefit"] for v in e5e.values()]
+    rho, p_sp = spearmanr(xs5, ys5)
+    r_pe = pearsonr(xs5, ys5)[0]
+    check("E5e Spearman rho(dfx, benefit) = +0.857, p = 0.007 (refutes "
+          "the headroom account)",
+          (round(float(rho), 3), round(float(p_sp), 3)), (0.857, 0.007))
+    check("E5e Pearson r(dfx, benefit) = +0.743",
+          round(float(r_pe), 3), 0.743)
+    hi = [v["benefit"] for v in e5e.values() if v["dfx"] >= 11]
+    lo = [v["benefit"] for v in e5e.values() if v["dfx"] < 11]
+    check("E5e high-dfx models (dfx >= 11) average +3.5 pp vs +0.9 pp",
+          (len(hi), round(float(np.mean(hi)), 1),
+           round(float(np.mean(lo)), 1)), (3, 3.5, 0.9))
+
+    # replication check against E5c (3 models, 18 conditions, seed-pinned)
+    rowsc2 = load("v2_e5c.json", "v2/e5c/intervene_e5c_cond.json")
+    e5c_spec = {(r["model"], r["param"], r["space"]): r
+                for r in rowsc2}
+    conds = 0
+    exact = 0
+    tol_ok = 0
+    acc_ok = 0
+    for m in m8:
+        for g in (0.75, 0.0, -0.5):
+            for sp in ("orig", "dose"):
+                if (m, g, sp) not in e5c_spec:
+                    continue
+                mine = next(r for r in ceil if r["model"] == m
+                            and r["param"] == g and r["space"] == sp)
+                old = e5c_spec[(m, g, sp)]
+                conds += 1
+                c_old, c_new = old["in_rank_cond"], mine["in_rank_cond"]
+                if c_old == c_new:
+                    exact += 1
+                if abs(c_old - c_new) <= 1e-6 * max(abs(c_old), 1.0):
+                    tol_ok += 1
+                if old["curve"][-1]["c100_acc"] == mine["curve"][-1]["c100_acc"]:
+                    acc_ok += 1
+    check("E5e x E5c overlap = 18 conditions", conds, 18)
+    check("E5e replication: cond exact 15/18, 18/18 within 1e-6 "
+          "(BLAS tail bits), acc 18/18",
+          (exact, tol_ok, acc_ok), (15, 18, 18))
 
     # ---------------- Holm family (primary tests) ----------------
     p_raw = [0.0039, 0.0078, 0.0078]  # P1b, P3a, P3b one-sided Wilcoxon

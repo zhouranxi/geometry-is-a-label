@@ -572,13 +572,29 @@ Whitening benefit concentrates in sharper recipes (lr $0.125$:
 median $+2.7$\,pp; lr $0.5$: median $+2.0$\,pp) over the sharpest
 (lr $1.0$: median $+0.7$\,pp, with one model at $-0.03$\,pp); the single
 negative model is the lr-$1.0$/wd-$5\mathrm{e}{-5}$ recipe, whose baseline
-$\dfx$ ($0.89$) is the \emph{smallest} in the grid --- consistent with a
-different conjecture: at this recipe the whitening operator saturates
-(no headroom above the floor), so measured benefit vanishes; at the same
-time models already sitting at high $\dfx$ have little whitening headroom.
-\emph{Either way this stratification was not preregistered}; we report it as
-exploratory (the paired-gain bootstrap CI is $[+0.2, +3.1]$\,pp), and the
-ceiling account is a conjecture, not a tested prediction. The full
+$\dfx$ ($0.87$) is the \emph{smallest} in the grid. Two accounts suggested
+themselves --- operator saturation at this recipe, and high-$\dfx$ models
+having little headroom --- and we have now tested both directly
+(Appendix~\ref{app:e5e}), by measuring the probe-space conditioning and the
+probe training curve in the original versus dose-whitened space for all
+eight paired models. The saturation account survives in a sharpened form:
+the negative model's feature covariance is \emph{already} nearly whitened
+(in-rank condition number $294$ in the original space, against
+$10^{8}$--$10^{9}$ for the sharpest-recipe models), so the operator has
+almost nothing to remove --- and indeed whitening neither improves its
+conditioning meaningfully ($22\times$, against a median of
+$4.6\times10^{3}\times$ across the other seven models), nor lowers its
+reachable training loss ($4.134 \to 4.165$ at epoch 40; one of three
+models where the loss fails to drop, the other two being slow-converging
+lr-$0.5$ probes), and its direct probe benefit is $+0.08$\,pp, the
+smallest of the eight. The
+headroom account is \emph{refuted}: across the eight models, baseline
+$\dfx$ correlates \emph{positively} with the whitening benefit
+(Spearman $\rho = +0.857$, $p = 0.007$; the three high-$\dfx$ models
+average $+3.5$\,pp against $+0.9$\,pp for the rest), so high-$\dfx$ models
+have \emph{more} room for probe-conditioning benefit, not less.
+\emph{The stratification itself was not preregistered}; we report it as
+exploratory (the paired-gain bootstrap CI is $[+0.2, +3.1]$\,pp). The full
 paired table follows.
 
 \begin{table}[t]
@@ -826,6 +842,8 @@ committed before any E5 datum existed; the E5b adjudication verdict in
 Scripts: \texttt{code/intervene\_v2\_paper.py} (E1--E3),
 \texttt{code/intervene\_e5\_dose.py} (E5 dose--response + MLP control),
 \texttt{code/intervene\_e5c\_cond.py} (E5c conditioning measurements),
+\texttt{code/intervene\_e5d\_ceiling.py} and
+\texttt{code/analyze\_e5d\_ceiling.py} (E5e saturation/headroom test),
 \texttt{code/intervene\_e6\_marker.py} (E6 second markers),
 \texttt{code/intervene\_effect\_probe.py},
 \texttt{code/intervene\_recolor.py}; data
@@ -970,6 +988,47 @@ linear), consistent with the probe-conditioning account of
 \S\ref{sec:e3}: whitening eases \emph{linear} probe optimization
 specifically. We flag that this control covers two models only; it
 establishes direction, not precise magnitudes.
+
+\section{E5e: direct test of the saturation and headroom conjectures}
+\label{app:e5e}
+\emph{Exploratory} (not preregistered; added to convert the two
+conjectures of the E3 stratification into measurements). We repeat the
+E5c protocol --- conditioning statistics of the probe-train covariance and
+the 40-epoch shared-protocol probe training curve, in the original versus
+the $\gamma{=}0$ dose-whitened space --- on \emph{all eight} E3 paired
+models rather than the three E5b models (three of the eight overlap E5c
+and reproduce its conditioning numbers and final accuracies under
+seed-pinned reruns; the condition numbers agree exactly in 15/18
+conditions and to floating-point tolerance in all 18, the residual
+differences coming from BLAS-level eigenvalue tail bits).
+
+The two conjectures fare differently.
+
+\emph{Operator saturation (supported, sharpened).} The model that showed
+no E3 benefit (lr-$1.0$/wd-$5\mathrm{e}{-5}$, baseline $\dfx=0.87$, the
+smallest in the grid) has an original-space in-rank condition number of
+$294$ --- three to seven orders of magnitude below the other seven models
+($10^{3}$--$10^{9}$). Its covariance is already nearly whitened, so the
+operator has almost nothing to remove: whitening improves its conditioning
+by only $22\times$ (median across the other seven:
+$4.6\times10^{3}\times$), fails to lower its reachable training loss
+($4.134 \to 4.165$ at epoch 40; one of three models where the loss does
+not drop, the other two being slow-converging lr-$0.5$ probes), and
+yields the smallest direct probe benefit of the eight ($+0.08$\,pp).
+Saturation at this recipe is therefore not a
+property of the operator but of the representation: the recipe trained a
+representation whose probe-space spectrum was already flat.
+
+\emph{High-$\dfx$ headroom (refuted).} Across the eight models, baseline
+$\dfx$ correlates \emph{positively} with the direct whitening benefit at
+$\gamma{=}0$ (Pearson $r = +0.743$, Spearman $\rho = +0.857$,
+$p = 0.007$): the three high-$\dfx$ models ($\dfx \ge 11$) average
+$+3.5$\,pp of probe benefit against $+0.9$\,pp for the five
+lower-$\dfx$ models. Whatever limits the benefit at the lr-$1.0$
+recipes, it is not exhaustion of the high-$\dfx$ models' headroom ---
+recipe sharpness, not geometry, is what correlates with the benefit's
+absence, consistent with the dose--response adjudication of
+\S\ref{sec:e3}. Data: \texttt{runs/v2\_e5d\_ceiling/intervene\_e5d\_ceiling.json}.
 
 \section{E5c: direct conditioning measurements}
 \label{app:e5c}

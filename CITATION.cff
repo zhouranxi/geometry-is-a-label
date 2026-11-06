@@ -15,8 +15,8 @@ keywords:
   - preregistration
   - reproducibility
 license: MIT
-version: 1.0.0
-date-released: "2026-11-05"
-doi: 10.5281/zenodo.23967260
+version: 1.1.0
+date-released: "2026-11-06"
+doi: 10.5281/zenodo.23993000
 repository-code: "https://github.com/zhouranxi/geometry-is-a-label"
-abstract: "Code and locked data for the preregistered causal battery showing that the observational link between representational dimensionality and OOD transfer (r = +0.97) does not license geometry-as-a-knob interventions: the geometric causal share of the slope is 7.7%, formation-phase whitening benefits are probe-conditioning effects, and every covariance-spectrum marker is a recipe fingerprint."
+abstract: "Code and locked data for the preregistered causal battery showing that the observational link between representational dimensionality and OOD transfer (r = +0.97) does not license geometry-as-a-knob interventions: the geometric causal share of the slope is 7.7%, formation-phase whitening benefits are probe-conditioning effects, and every covariance-spectrum marker is a recipe fingerprint. v1.1.0 absorbs the E5e direct tests of the saturation and headroom conjectures (55-check self-verification)."
