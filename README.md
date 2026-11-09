@@ -19,7 +19,7 @@ one.
 pip install numpy scipy
 python code/verify.py
 ```
-Re-derives **77 headline numbers** from the locked JSON files in `runs/`
+Re-derives **80 headline numbers** from the locked JSON files in `runs/`
 and asserts each against the value printed in the manuscript — no GPU, no
 downloads, a few seconds of CPU. The checks cover every experiment
 (E1 operator battery, E2 architecture extension, E3 timing separation,
@@ -109,8 +109,13 @@ here).
   **not** replicate across seeds (0.502 / 0.325 / 0.264), nor does the
   low-dose cliff. The low-D recipe is inert on both replication seeds
   (10/10 inside the ±0.022 placebo band), and exactly 1 of 30 dose
-  points loses function. These failed preregistered criteria are
-  reported as limitations in `paper/causality/main.pdf`.
+  points loses function. The 14.7% is a batch-level mean, not a
+  per-intervention ceiling: five of the 39 arms exceed the 20% label
+  threshold (max 54.5%), and a post-hoc secant recheck of the dose
+  archive finds two replication-seed low-dose points at 30–33% of
+  observational (Limitations (vi) of the manuscript). These failed
+  preregistered criteria are reported as limitations in
+  `paper/causality/main.pdf`.
 
 ## Preregistration
 
@@ -152,7 +157,7 @@ If you use this archive, please cite it:
   (latest published release: v1.1.0,
   [10.5281/zenodo.23993000](https://doi.org/10.5281/zenodo.23993000);
   v1.0.0: [10.5281/zenodo.23967260](https://doi.org/10.5281/zenodo.23967260)).
-  The v1.2.0 tree (E4 forcing, three-seed dose replication, 77 checks) is
+  The v1.2.0 tree (E4 forcing, three-seed dose replication, 80 checks) is
   the working snapshot accompanying the TMLR submission; it has not been
   deposited as a new Zenodo version.
 - Manuscript: under review at Transactions on Machine Learning Research

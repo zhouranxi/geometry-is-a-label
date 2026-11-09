@@ -383,7 +383,19 @@ def main() -> int:
     LABEL_THR_E4 = 0.2 * S_OBS_E4
     KNOB_THR_E4 = 0.5 * S_OBS_E4
     BAND_E4 = 0.022
-    full = json.loads((REPO / "runs" / "p4_full"
+    def _e4_first(*cands):
+        for c in cands:
+            if c.is_file():
+                return c
+        raise FileNotFoundError("no E4 data file among: " +
+                                ", ".join(str(c) for c in cands))
+    P4_FULL_DIR = REPO / "runs" / "p4_full"
+    if not P4_FULL_DIR.is_dir():          # main-repo layout
+        P4_FULL_DIR = REPO / "runs" / "v2_p4_forcing"
+    P4_DOSE_DIR = REPO / "runs" / "p4_dose"
+    if not P4_DOSE_DIR.is_dir():          # main-repo layout
+        P4_DOSE_DIR = REPO / "results" / "p4_dose"
+    full = json.loads((P4_FULL_DIR
                        / "full_merged.json").read_text())["rows"]
 
     def e4_valid(r):
@@ -463,10 +475,10 @@ def main() -> int:
           (95, 0.4))
 
     # dose scan: power law b = 0.502 on the hi recipe excluding lam=0.3
-    dose = json.loads((REPO / "runs" / "p4_dose"
+    dose = json.loads((P4_DOSE_DIR
                        / "dose_scan.json").read_text())["rows"]
     base_hi = next(r for r in json.loads(
-        (REPO / "runs" / "p4_full" / "full_base_lr0.125.json")
+        (P4_FULL_DIR / "full_base_lr0.125.json")
         .read_text())["rows"] if r["kind"] == "base")
     pts = {}
     for r in main_rows:
@@ -509,7 +521,7 @@ def main() -> int:
     # by importing it rather than reimplementing the rule here.
     from dose_shape_fit_seeds import (BAND as BAND_S, ID_FLOOR as ID_FLOOR_S,
                                       find_anomaly, fit_power)
-    sdoc = json.loads((REPO / "runs" / "p4_dose" /
+    sdoc = json.loads((P4_DOSE_DIR /
                        "dose_scan_seeds.json").read_text(encoding="utf-8"))
     sps = sdoc["points"]
     check("E4 seed archive: 30 dose points, no missing cells",
@@ -540,10 +552,33 @@ def main() -> int:
               if abs(v[1]) <= BAND_S), 10)
     check("E4 function preservation: exactly 1 of 30 dose points below -0.02",
           sum(1 for p in sps if p["id_keep"] < ID_FLOOR_S), 1)
-    sverdict = (REPO / "runs" / "p4_dose" /
+    sverdict = (P4_DOSE_DIR /
                 "dose_seeds_verdict.txt").read_text(encoding="utf-8")
     check("E4 preregistered verdict records the R1-s replication failure",
           "复制失败" in sverdict, True)
+
+    # ---------------- E4 post-hoc per-intervention slopes (Lim. vi) -----
+    # The 14.7% transmission is a placebo-calibrated batch-level mean, not
+    # a ceiling on any single intervention. These checks pin the spread the
+    # Limitations (vi) paragraph quotes, so the text cannot drift from the
+    # data. Values recompute from the locked JSON only.
+    check("E4 five of the 39 in-band arms exceed the 20% label threshold "
+         "(max 54.5% of s_obs)",
+          (sum(1 for s in sl_e4 if s > LABEL_THR_E4),
+           round(max(sl_e4) / S_OBS_E4 * 100, 1)), (5, 54.5))
+    sec_all = [p["c_delta"] / p["d_delta"] / S_OBS_E4 * 100
+               for p in sps if p["d_delta"] > 0]
+    check("E4 dose-archive per-point secants: 4 of 30 exceed 20% of s_obs, "
+         "none reaches 100%",
+          (sum(1 for x in sec_all if x > 20),
+           sum(1 for x in sec_all if x >= 100)),
+          (4, 0))
+    check("E4 replication-seed low-dose plateau points at 33.4% / 29.9% "
+         "of s_obs (hi s1/s2 lam=0.03)",
+          tuple(round(curves_s[("hi", s)][0.03][1]
+                      / curves_s[("hi", s)][0.03][0] / S_OBS_E4 * 100, 1)
+                for s in (1, 2)),
+          (33.4, 29.9))
 
     # ---------------- Holm family (primary tests) ----------------
     p_raw = [0.0039, 0.0078, 0.0078]  # P1b, P3a, P3b one-sided Wilcoxon
