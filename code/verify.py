@@ -375,6 +375,176 @@ def main() -> int:
           "(BLAS tail bits), acc 18/18",
           (exact, tol_ok, acc_ok), (15, 18, 18))
 
+    # ---------------- E4 formation-phase forcing (96-run preregistered batch) ----------------
+    # Mirrors code/merge_p4_full.py: S_OBS on the d_ent scale, placebo band
+    # +/-0.022 (the full-batch placebo SD, the value the paper's 39-arm
+    # count uses), validity = finite d_ent + no functional break.
+    S_OBS_E4 = 0.0161
+    LABEL_THR_E4 = 0.2 * S_OBS_E4
+    KNOB_THR_E4 = 0.5 * S_OBS_E4
+    BAND_E4 = 0.022
+    full = json.loads((REPO / "runs" / "p4_full"
+                       / "full_merged.json").read_text())["rows"]
+
+    def e4_valid(r):
+        de = r.get("d_ent_id")
+        if de is None or not (isinstance(de, (int, float))
+                              and np.isfinite(de)):
+            return False
+        ik = r.get("id_keep")
+        if ik is not None and np.isfinite(ik) and ik < -0.05:
+            return False
+        return True
+
+    main_rows = [r for r in full
+                 if str(r.get("_src", "")).startswith("full_")]
+    check("E4 main batch = 96 runs (8 recipes x 3 seeds x 4 conditions)",
+          len(main_rows), 96)
+
+    # manipulation check
+    wh10 = [r for r in main_rows if r["kind"] == "whiten"
+            and r.get("lambda") == 1.0]
+    co = [r for r in main_rows if r["kind"] == "concentrate"]
+    check("E4 whiten@1.0 raises d_ent by median +48.4",
+          round(float(np.median([r["d_delta"] for r in wh10])), 1), 48.4)
+    check("E4 concentrate lowers d_ent by median -11.8",
+          round(float(np.median([r["d_delta"] for r in co])), 1), -11.8)
+    check("E4 whiten@1.0 median d-ent gain = 9.2x the grid baseline "
+          "(173.9 / 18.9 at lambda=3 dose scan)",
+          round(173.959 / 18.877, 1), 9.2)
+
+    # P4-2: D-raising arms outside the placebo band
+    valid = [r for r in full if r.get("slope") is not None
+             and np.isfinite(r["slope"]) and e4_valid(r)]
+    up = [r for r in valid if r["kind"] in ("whiten", "disperse")
+          and abs(r["c_delta"]) > BAND_E4]
+    sl_e4 = [r["slope"] for r in up]
+    check("E4 D-raising arms outside band = 39 (band +/-0.022)",
+          len(up), 39)
+    check("E4 all 39 arms move transfer positively (39/39)",
+          sum(1 for s in sl_e4 if s > 0), 39)
+    check("E4 median forcing slope 0.0022 (9-18% of observational)",
+          round(float(np.median(sl_e4)), 4), 0.0022)
+    check("E4 34/39 arms below the preregistered label threshold",
+          sum(1 for s in sl_e4 if s <= LABEL_THR_E4), 34)
+    check("E4 slope range [0.00036, 0.00878]",
+          (round(min(sl_e4), 5), round(max(sl_e4), 5)),
+          (0.00036, 0.00878))
+
+    # paired whiten@0.1 vs placebo
+    pmap = {(r["model"], r.get("seed")): r for r in valid
+            if r["kind"] == "placebo"}
+    wmap = {(r["model"], r.get("seed")): r for r in valid
+            if r["kind"] == "whiten" and r.get("lambda") == 0.1}
+    diffs = [wmap[k]["c_delta"] - pmap[k]["c_delta"]
+             for k in wmap if k in pmap]
+    n = len(diffs)
+    m_ = float(np.mean(diffs))
+    s_ = float(np.std(diffs, ddof=1))
+    from scipy.stats import t as t_dist
+    t_stat = m_ / (s_ / np.sqrt(n))
+    check("E4 paired whiten@0.1 vs placebo: n=23, +0.030 (SD 0.021), "
+          "t=6.89, d=1.44",
+          (n, round(m_, 3), round(s_, 3), round(float(t_stat), 2),
+           round(m_ / s_, 2)),
+          (23, 0.030, 0.021, 6.89, 1.44))
+    check("E4 net slope 0.0297/12.58 = 0.00236 = 14.7% of s_obs",
+          round(100 * (m_ / float(np.mean([wmap[k]["d_delta"]
+                                           - pmap[k]["d_delta"]
+                                           for k in wmap if k in pmap])))
+                / S_OBS_E4, 1), 14.7)
+
+    # function preservation
+    ok_id = [r for r in main_rows if r["id_keep"] is not None
+             and r["id_keep"] >= -0.05]
+    devs = sorted(abs(r["id_keep"]) * 100 for r in ok_id)
+    check("E4 95/96 runs keep ID accuracy in band; median |dID| = 0.4 pp",
+          (len(ok_id), round(float(np.median(devs)), 1)),
+          (95, 0.4))
+
+    # dose scan: power law b = 0.502 on the hi recipe excluding lam=0.3
+    dose = json.loads((REPO / "runs" / "p4_dose"
+                       / "dose_scan.json").read_text())["rows"]
+    base_hi = next(r for r in json.loads(
+        (REPO / "runs" / "p4_full" / "full_base_lr0.125.json")
+        .read_text())["rows"] if r["kind"] == "base")
+    pts = {}
+    for r in main_rows:
+        if (r["model"] == "resnet18_lr0.125_wd0.0001_s0"
+                and r["kind"] == "whiten"
+                and r.get("_src") == "full_s0_whiten_lam0.1"):
+            pts[0.1] = (r["d_delta"], r["c_delta"])
+        if (r["model"] == "resnet18_lr0.125_wd0.0001_s0"
+                and r["kind"] == "whiten"
+                and r.get("_src") == "full_s0_whiten_lam1.0"):
+            pts[1.0] = (r["d_delta"], r["c_delta"])
+    for r in dose:
+        if r["model"].startswith("resnet18_lr0.125_wd0.0001"):
+            pts[r["lambda"]] = (r["d_ent_id"] - base_hi["d_ent_id"],
+                                r["c100_probe"] - base_hi["c100_probe"])
+    check("E4 five-point log-axis dose scan for the hi recipe",
+          sorted(pts), [0.03, 0.1, 0.3, 1.0, 3.0])
+    sub = {k: v for k, v in pts.items() if k != 0.3}
+    xs = np.log([v[0] for v in sub.values()])
+    ys = np.log([v[1] for v in sub.values()])
+    bfit = float(np.polyfit(xs, ys, 1)[0])
+    check("E4 power-law exponent b = 0.502 (excluding the lam=0.3 "
+          "in-band outlier)",
+          round(bfit, 3), 0.502)
+    # local secant slopes in % of s_obs (d_ent scale)
+    P5 = {0.03: pts[0.03], 0.1: pts[0.1], 0.3: pts[0.3],
+          1.0: pts[1.0], 3.0: pts[3.0]}
+    lams5 = [0.03, 0.1, 0.3, 1.0, 3.0]
+    sec = []
+    for i in range(1, 5):
+        (d0, c0), (d1, c1) = P5[lams5[i - 1]], P5[lams5[i]]
+        sec.append(round((c1 - c0) / (d1 - d0) / S_OBS_E4 * 100, 1))
+    check("E4 local secant slopes 14.4 -> 5.7 -> 1.9 % of s_obs "
+          "(cliff saturation)",
+          [sec[0], sec[2], sec[3]], [14.4, 5.7, 1.9])
+
+    # ---------------- E4 dose-scan seed replication (App. 25) ----------
+    # Criteria were preregistered before the 12 replication runs. Re-derive
+    # the exponent with the very same anomaly rule as the verdict script,
+    # by importing it rather than reimplementing the rule here.
+    from dose_shape_fit_seeds import (BAND as BAND_S, ID_FLOOR as ID_FLOOR_S,
+                                      find_anomaly, fit_power)
+    sdoc = json.loads((REPO / "runs" / "p4_dose" /
+                       "dose_scan_seeds.json").read_text(encoding="utf-8"))
+    sps = sdoc["points"]
+    check("E4 seed archive: 30 dose points, no missing cells",
+          (len(sps), sdoc["meta"]["missing"]), (30, []))
+    curves_s = {}
+    for p in sps:
+        curves_s.setdefault((p["recipe"], p["seed"]), {})[p["lambda"]] = (
+            p["d_delta"], p["c_delta"], p["id_keep"])
+    bs_s = {}
+    for s in (0, 1, 2):
+        pts = {l: v for l, v in curves_s[("hi", s)].items()
+               if v[2] >= ID_FLOOR_S}
+        clean = find_anomaly(pts)
+        fit, _ = fit_power([clean[l][0] for l in sorted(clean)],
+                           [clean[l][1] for l in sorted(clean)])
+        bs_s[s] = round(fit[1], 3)
+    check("E4 power-law exponent across seeds b = 0.502 / 0.325 / 0.264",
+          [bs_s[s] for s in (0, 1, 2)], [0.502, 0.325, 0.264])
+    check("E4 strong-replication criterion for b NOT met (|median-b_s0|>=0.15)",
+          abs(float(np.median(list(bs_s.values()))) - bs_s[0]) >= 0.15, True)
+    check("E4 cliff absent on both replication seeds "
+          "(lam=0.03 already outside placebo band)",
+          [round(curves_s[("hi", s)][0.03][1], 4) for s in (1, 2)],
+          [0.0679, 0.0623])
+    check("E4 low-D recipe inert on replication seeds (10/10 in band)",
+          sum(1 for s in (1, 2)
+              for v in curves_s[("lo", s)].values()
+              if abs(v[1]) <= BAND_S), 10)
+    check("E4 function preservation: exactly 1 of 30 dose points below -0.02",
+          sum(1 for p in sps if p["id_keep"] < ID_FLOOR_S), 1)
+    sverdict = (REPO / "runs" / "p4_dose" /
+                "dose_seeds_verdict.txt").read_text(encoding="utf-8")
+    check("E4 preregistered verdict records the R1-s replication failure",
+          "复制失败" in sverdict, True)
+
     # ---------------- Holm family (primary tests) ----------------
     p_raw = [0.0039, 0.0078, 0.0078]  # P1b, P3a, P3b one-sided Wilcoxon
     order = np.argsort(p_raw)

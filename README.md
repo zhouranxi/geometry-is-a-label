@@ -19,10 +19,12 @@ one.
 pip install numpy scipy
 python code/verify.py
 ```
-Re-derives **55 headline numbers** from the locked JSON files in `runs/`
+Re-derives **77 headline numbers** from the locked JSON files in `runs/`
 and asserts each against the value printed in the manuscript — no GPU, no
 downloads, a few seconds of CPU. The checks cover every experiment
 (E1 operator battery, E2 architecture extension, E3 timing separation,
+E4 formation-phase forcing 96-run preregistered batch + dose scan +
+three-seed dose replication,
 E5b dose–response mechanism adjudication, E5c conditioning measurements,
 E5d MLP control, E5e saturation/headroom conjecture tests, E6 marker
 generality) plus the Holm-corrected primary test family. If any check
@@ -54,11 +56,23 @@ paper/      TMLR LaTeX source (anonymized), compiled PDF, preregistration ADR
 | `code/paper3_ci.py` | bootstrap CIs, permutation noise floors, Holm correction |
 | `code/paper3_tables.py` | regenerates `paper/causality/tables_auto.tex` |
 | `code/verify.py` | **the self-verification entry point** |
+| `code/dose_shape_fit_seeds.py` | preregistered three-seed dose-scan verdict (R1-s…R4-s); `--data runs/p4_dose/dose_scan_seeds.json` runs from the shipped archive alone |
+| `code/dose_shape_fit.py` | single-seed Appendix-24 shape/power-law fit (server-side provenance; reads the raw per-run directories) |
+| `code/build_dose_scan_seeds.py` | folds the 27 per-run source directories into `runs/p4_dose/dose_scan_seeds.json` |
+| `code/merge_p4_full.py`, `code/train_forcing_p4.py` | provenance for the 96-run forcing batch (needs GPU + checkpoints) |
+| `code/make_fig5_dose.py` | regenerates `paper/causality/figs/fig5_dose.{pdf,png}` from the shipped archive (accepts either the `results/` or `runs/` layout) |
+| `runs/p4_dose/dose_seeds_verdict.txt` | verbatim verdict output; the failed R1-s/R2-s criteria are reported as a limitation in the paper |
 
 The analysis chain (`paper3_analysis.py` → `paper3_ci.py` →
 `paper3_tables.py`) runs from the locked JSON alone (numpy/scipy/
-matplotlib). The intervention experiments additionally need a GPU,
-CIFAR-10/100, and the trained checkpoints (not redistributed here).
+matplotlib), as do `code/verify.py`, `code/dose_shape_fit_seeds.py --data`,
+and `code/make_fig5_dose.py`. Scripts that address raw per-run directories
+or training (`train_forcing_p4.py`, `merge_p4_full.py`,
+`dose_shape_fit.py`, `build_dose_scan_seeds.py`) are shipped as provenance:
+they retain the original server paths and are **not** needed to re-derive
+any number in the manuscript. The intervention experiments additionally
+need a GPU, CIFAR-10/100, and the trained checkpoints (not redistributed
+here).
 
 ## Key numbers (all asserted by `code/verify.py`)
 
@@ -86,6 +100,17 @@ CIFAR-10/100, and the trained checkpoints (not redistributed here).
 - E6: PR/erank anchor observationally (+0.77/+0.86) but are *raised* ~30%
   by transfer-destroying noise — every spectrum marker is a recipe
   fingerprint, none is a knob
+- E4: 96 preregistered formation-phase forcing runs move D_eff without
+  moving transfer (39/39 arms same sign, 34/39 at or below the
+  preregistered label threshold); paired whiten@λ=0.1 vs placebo
+  +0.030 (t = 6.89, d = 1.44) implies a net slope of 14.7% of the
+  observational slope. A five-point dose scan is monotone, sub-linear
+  and saturating; the single-seed power-law exponent b = 0.502 does
+  **not** replicate across seeds (0.502 / 0.325 / 0.264), nor does the
+  low-dose cliff. The low-D recipe is inert on both replication seeds
+  (10/10 inside the ±0.022 placebo band), and exactly 1 of 30 dose
+  points loses function. These failed preregistered criteria are
+  reported as limitations in `paper/causality/main.pdf`.
 
 ## Preregistration
 
@@ -95,14 +120,26 @@ and the full decision log (Appendices 9–10: three rounds of adversarial
 self-audit, ~40 corrections, none changing the direction of any
 conclusion; Appendix 14: the E5e conjecture tests, whose audit caught
 three overstated sentences before they reached the compiled PDF).
+Appendices 16–20 freeze the 96-run forcing battery and its verdict before
+the data existed; Appendices 23–24 freeze and adjudicate the five-point
+dose scan; Appendix 25 freezes R1-s…R4-s for the three-seed replication
+and records, after all 12 runs landed, that R1-s (exponent replication)
+and R2-s (cliff replication) **failed** while R3-s (low-D inertness)
+replicated and R4-s found 1/30 function-loss points. The manuscript was
+downgraded accordingly; the criteria were never revised after the data.
 
 ## Data
 
 All numbers derive from 8 purpose-trained ResNet-18 recipes (3 lr × wd
 grids × seeds) × 19 intervention conditions = 152 cells, plus
 architecture-extension cohorts (ResNet-34/50, ShuffleNet-V2-x1.0,
-RegNetY-400MF, 4 recipes per family). Checkpoints (~2.8 GB) are available
-from the authors on request.
+RegNetY-400MF, 4 recipes per family). E4 adds `runs/p4_full/` (the 96-run
+forcing batch and its three base readouts) and `runs/p4_dose/`: a
+single-seed five-point scan plus `dose_scan_seeds.json`, a self-contained
+archive of 36 base readouts and 30 dose points covering three seeds × two
+recipes × five λ. The 12 newly trained replication runs are folded into
+that JSON, so no per-run server directory is needed to reproduce the
+verdict. Checkpoints (~2.8 GB) are available from the authors on request.
 
 ## Citation
 
@@ -110,10 +147,14 @@ If you use this archive, please cite it:
 
 - Archive: Ranxi Zhou. *Geometry Is a Label, Not a Knob: Causally
   Separating Representational Dimensionality from OOD Generalization*
-  (code, data, and self-verification), Zenodo, v1.1.0,
-  DOI [10.5281/zenodo.23993000](https://doi.org/10.5281/zenodo.23993000)
-  (concept DOI: [10.5281/zenodo.23967259](https://doi.org/10.5281/zenodo.23967259);
+  (code, data, and self-verification), Zenodo, v1.2.0 working tree,
+  concept DOI [10.5281/zenodo.23967259](https://doi.org/10.5281/zenodo.23967259)
+  (latest published release: v1.1.0,
+  [10.5281/zenodo.23993000](https://doi.org/10.5281/zenodo.23993000);
   v1.0.0: [10.5281/zenodo.23967260](https://doi.org/10.5281/zenodo.23967260)).
+  The v1.2.0 tree (E4 forcing, three-seed dose replication, 77 checks) is
+  the working snapshot accompanying the TMLR submission; it has not been
+  deposited as a new Zenodo version.
 - Manuscript: under review at Transactions on Machine Learning Research
   (see `paper/causality/main.pdf`).
 
