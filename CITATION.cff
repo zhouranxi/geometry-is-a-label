@@ -17,13 +17,16 @@ keywords:
 license: MIT
 version: 1.2.0
 date-released: "2026-11-09"
-doi: 10.5281/zenodo.23967259
+doi: 10.5281/zenodo.24080835
 identifiers:
   - type: doi
     value: 10.5281/zenodo.23993000
-    description: "Version DOI of the latest published Zenodo release (v1.1.0); the v1.2.0 working tree has not been deposited as a new Zenodo version."
+    description: "Version DOI of the v1.1.0 release."
   - type: doi
     value: 10.5281/zenodo.23967260
     description: "Version DOI of the v1.0.0 release."
+  - type: doi
+    value: 10.5281/zenodo.23967259
+    description: "Concept DOI (all versions)."
 repository-code: "https://github.com/zhouranxi/geometry-is-a-label"
 abstract: "Code and locked data for the preregistered causal battery showing that the observational link between representational dimensionality and OOD transfer (r = +0.97) does not license geometry-as-a-knob interventions: the geometric causal share of the slope is 7.7%, every covariance-spectrum marker is a recipe fingerprint, and the formation-phase forcing battery (96 preregistered runs + five-point dose scan) shows the causal channel carries only ~15% of the observational slope. A preregistered three-seed dose replication does not reproduce the single-seed power-law exponent (b = 0.502 / 0.325 / 0.264) or the low-dose cliff, so the manuscript states only a sub-linear and saturating dose response and reports the failed criteria as limitations. v1.2.0 absorbs the E4 forcing experiments and the replication verdict into the manuscript, ships the locked three-seed archive and Figure 5, and extends the self-verification to 80 checks."
