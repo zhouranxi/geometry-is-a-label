@@ -19,12 +19,12 @@ one.
 pip install numpy scipy
 python code/verify.py
 ```
-Re-derives **80 headline numbers** from the locked JSON files in `runs/`
+Re-derives **87 headline numbers** from the locked JSON files in `runs/`
 and asserts each against the value printed in the manuscript — no GPU, no
 downloads, a few seconds of CPU. The checks cover every experiment
 (E1 operator battery, E2 architecture extension, E3 timing separation,
 E4 formation-phase forcing 96-run preregistered batch + dose scan +
-three-seed dose replication,
+three-seed dose replication + five-seed second-stage replication,
 E5b dose–response mechanism adjudication, E5c conditioning measurements,
 E5d MLP control, E5e saturation/headroom conjecture tests, E6 marker
 generality) plus the Holm-corrected primary test family. If any check
@@ -56,12 +56,13 @@ paper/      TMLR LaTeX source (anonymized), compiled PDF, preregistration ADR
 | `code/paper3_ci.py` | bootstrap CIs, permutation noise floors, Holm correction |
 | `code/paper3_tables.py` | regenerates `paper/causality/tables_auto.tex` |
 | `code/verify.py` | **the self-verification entry point** |
-| `code/dose_shape_fit_seeds.py` | preregistered three-seed dose-scan verdict (R1-s…R4-s); `--data runs/p4_dose/dose_scan_seeds.json` runs from the shipped archive alone |
+| `code/dose_shape_fit_seeds.py` | preregistered dose-scan verdict (R1-s…R4-s; R5-s…R8-s fire when s3/s4 are present); `--data runs/p4_dose/dose_scan_seeds_v2.json` runs the five-seed archive alone |
 | `code/dose_shape_fit.py` | single-seed Appendix-24 shape/power-law fit (server-side provenance; reads the raw per-run directories) |
-| `code/build_dose_scan_seeds.py` | folds the 27 per-run source directories into `runs/p4_dose/dose_scan_seeds.json` |
+| `code/build_dose_scan_seeds.py` | folds the per-run source directories into `runs/p4_dose/dose_scan_seeds.json` (3 seeds) and `dose_scan_seeds_v2.json` (5 seeds, 42 points) |
 | `code/merge_p4_full.py`, `code/train_forcing_p4.py` | provenance for the 96-run forcing batch (needs GPU + checkpoints) |
 | `code/make_fig5_dose.py` | regenerates `paper/causality/figs/fig5_dose.{pdf,png}` from the shipped archive (accepts either the `results/` or `runs/` layout) |
 | `runs/p4_dose/dose_seeds_verdict.txt` | verbatim verdict output; the failed R1-s/R2-s criteria are reported as a limitation in the paper |
+| `runs/p4_dose/dose_s34_verdict.txt` | verbatim verdict for the second-stage s3/s4 batch (R5-s…R8-s, all four criteria passed) |
 
 The analysis chain (`paper3_analysis.py` → `paper3_ci.py` →
 `paper3_tables.py`) runs from the locked JSON alone (numpy/scipy/
@@ -107,15 +108,18 @@ here).
   observational slope. A five-point dose scan is monotone, sub-linear
   and saturating; the single-seed power-law exponent b = 0.502 does
   **not** replicate across seeds (0.502 / 0.325 / 0.264), nor does the
-  low-dose cliff. The low-D recipe is inert on both replication seeds
-  (10/10 inside the ±0.022 placebo band), and exactly 1 of 30 dose
-  points loses function. The 14.7% is a batch-level mean, not a
-  per-intervention ceiling: five of the 39 arms exceed the 20% label
-  threshold (max 54.5%), and a post-hoc secant recheck of the dose
-  archive finds two replication-seed low-dose points at 30–33% of
-  observational (Limitations (vi) of the manuscript). These failed
-  preregistered criteria are reported as limitations in
-  `paper/causality/main.pdf`.
+  low-dose cliff. The low-D recipe is inert on all replication seeds
+  (10/10 + 6/6 points inside the ±0.022 placebo band across five
+  seeds), and exactly 1 of 30 dose points loses function (12/12
+  preserved in the s3/s4 batch). The 14.7% is a batch-level mean, not
+  a per-intervention ceiling: five of the 39 arms exceed the 20% label
+  threshold (max 54.5%), and a preregistered second two-seed
+  replication batch (seeds 3–4, ADR-0016 App. 26/28) confirms the
+  higher low-dose plateau as a cross-seed fact — four of five seeds'
+  λ=0.03 secants sit at 30–38% of observational (17.3 / 33.4 / 29.9 /
+  30.7 / 37.5%), with the archive maximum at 37.5%, far below the
+  preregistered 60% upper bound (Limitations (vi) of the manuscript).
+  These outcomes are reported in `paper/causality/main.pdf`.
 
 ## Preregistration
 
@@ -130,8 +134,13 @@ the data existed; Appendices 23–24 freeze and adjudicate the five-point
 dose scan; Appendix 25 freezes R1-s…R4-s for the three-seed replication
 and records, after all 12 runs landed, that R1-s (exponent replication)
 and R2-s (cliff replication) **failed** while R3-s (low-D inertness)
-replicated and R4-s found 1/30 function-loss points. The manuscript was
-downgraded accordingly; the criteria were never revised after the data.
+replicated and R4-s found 1/30 function-loss points. Appendix 26 freezes
+R5-s…R8-s for a second two-seed batch (s3/s4, lowest three doses) before
+any of its runs launched; Appendix 28 adjudicates it after landing:
+R5-s **cross-seed fact** (4/5 seeds ≥ 20%), R6-s bound held (max 37.5%),
+R7-s inertness held (6/6), R8-s preservation held (12/12). The
+manuscript was updated accordingly; the criteria were never revised
+after the data.
 
 ## Data
 
@@ -140,11 +149,15 @@ grids × seeds) × 19 intervention conditions = 152 cells, plus
 architecture-extension cohorts (ResNet-34/50, ShuffleNet-V2-x1.0,
 RegNetY-400MF, 4 recipes per family). E4 adds `runs/p4_full/` (the 96-run
 forcing batch and its three base readouts) and `runs/p4_dose/`: a
-single-seed five-point scan plus `dose_scan_seeds.json`, a self-contained
-archive of 36 base readouts and 30 dose points covering three seeds × two
-recipes × five λ. The 12 newly trained replication runs are folded into
-that JSON, so no per-run server directory is needed to reproduce the
-verdict. Checkpoints (~2.8 GB) are available from the authors on request.
+single-seed five-point scan, `dose_scan_seeds.json` (a self-contained
+archive of 36 base readouts and 30 dose points covering three seeds ×
+two recipes × five λ), and `dose_scan_seeds_v2.json` (40 base readouts
+and 42 dose points covering five seeds; the s3/s4 batch runs the three
+lowest doses per the App. 26 preregistration, so λ=0.1/1.0 anchors are
+deliberately absent for those seeds). The 24 newly trained replication
+runs are folded into the JSONs, so no per-run server directory is
+needed to reproduce either verdict. Checkpoints (~2.8 GB) are available
+from the authors on request.
 
 ## Citation
 

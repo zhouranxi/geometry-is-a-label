@@ -12,6 +12,7 @@ have diverged; the repository should not be cited until they agree again.
 """
 from __future__ import annotations
 
+import collections
 import json
 import sys
 from pathlib import Path
@@ -579,6 +580,51 @@ def main() -> int:
                       / curves_s[("hi", s)][0.03][0] / S_OBS_E4 * 100, 1)
                 for s in (1, 2)),
           (33.4, 29.9))
+
+    # ---------------- E4 second-stage replication s3/s4 (App. 26/28) ----
+    # Criteria R5-s..R8-s were frozen in ADR-0016 App. 26 before any s3/s4
+    # run; the verdict text is produced by code/dose_shape_fit_seeds.py.
+    s2doc = json.loads((P4_DOSE_DIR /
+                        "dose_scan_seeds_v2.json").read_text(encoding="utf-8"))
+    sps2 = s2doc["points"]
+    m2 = s2doc["meta"]
+    check("E4 s3/s4 archive: 42 points, expected 42, nothing missing",
+          (m2["n_points"], m2["expected_points"], m2["missing"]),
+          (42, 42, []))
+    check("E4 s3/s4 archive: per-seed point counts 10/10/10/6/6",
+          sorted(collections.Counter(p["seed"] for p in sps2).items()),
+          [(0, 10), (1, 10), (2, 10), (3, 6), (4, 6)])
+    curves2 = {}
+    for p in sps2:
+        curves2.setdefault((p["recipe"], p["seed"]), {})[p["lambda"]] = (
+            p["d_delta"], p["c_delta"], p["id_keep"])
+    plat5 = tuple(round(curves2[("hi", s)][0.03][1]
+                        / curves2[("hi", s)][0.03][0] / S_OBS_E4 * 100, 1)
+                  for s in range(5))
+    check("E4 R5-s low-dose plateau secants across five seeds "
+          "17.3/33.4/29.9/30.7/37.5 % of s_obs (four of five >= 20%)",
+          (plat5, sum(1 for x in plat5 if x >= 20)),
+          ((17.3, 33.4, 29.9, 30.7, 37.5), 4))
+    sec2max = max(p["c_delta"] / p["d_delta"] / S_OBS_E4 * 100
+                  for p in sps2 if p["d_delta"] > 0)
+    check("E4 R6-s maximum secant in 42-point archive = 37.5% of s_obs "
+          "(< 60% bound, < 100% hard line)",
+          round(sec2max, 1), 37.5)
+    check("E4 R7-s low-D recipe inert on seeds 3/4 (6/6 points in band)",
+          sum(1 for s in (3, 4)
+              for v in curves2[("lo", s)].values()
+              if abs(v[1]) <= BAND_S), 6)
+    check("E4 R8-s function preserved on all 12 s3/s4 runs "
+          "(worst id_keep -0.0132)",
+          (sum(1 for p in sps2 if p["seed"] >= 3
+               and p["id_keep"] >= -0.02),
+           round(min(p["id_keep"] for p in sps2
+                     if p["seed"] >= 3), 4)),
+          (12, -0.0132))
+    v2verdict = (P4_DOSE_DIR /
+                 "dose_s34_verdict.txt").read_text(encoding="utf-8")
+    check("E4 s3/s4 verdict records R5-s cross-seed fact and R6-s bound",
+          ("4 种子 ≥20%" in v2verdict) and ("37.5%" in v2verdict), True)
 
     # ---------------- Holm family (primary tests) ----------------
     p_raw = [0.0039, 0.0078, 0.0078]  # P1b, P3a, P3b one-sided Wilcoxon
