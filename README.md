@@ -165,9 +165,10 @@ If you use this archive, please cite it:
 
 - Archive: Ranxi Zhou. *Geometry Is a Label, Not a Knob: Causally
   Separating Representational Dimensionality from OOD Generalization*
-  (code, data, and self-verification), Zenodo, v1.2.0,
-  DOI [10.5281/zenodo.24080835](https://doi.org/10.5281/zenodo.24080835)
-  (concept DOI: [10.5281/zenodo.23967259](https://doi.org/10.5281/zenodo.23967259);
+  (code, data, and self-verification), Zenodo, v1.3.0,
+  DOI [10.5281/zenodo.TODO_V13](https://doi.org/10.5281/zenodo.TODO_V13)
+  (concept DOI, all versions: [10.5281/zenodo.23967259](https://doi.org/10.5281/zenodo.23967259);
+  v1.2.0: [10.5281/zenodo.24080835](https://doi.org/10.5281/zenodo.24080835);
   v1.1.0: [10.5281/zenodo.23993000](https://doi.org/10.5281/zenodo.23993000);
   v1.0.0: [10.5281/zenodo.23967260](https://doi.org/10.5281/zenodo.23967260)).
 - Manuscript: under review at Transactions on Machine Learning Research
